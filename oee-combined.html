@@ -144,14 +144,19 @@
     color: var(--ink-muted);
     border-bottom: 1px solid var(--line);
   }
-  .top3-table { font-size: 15px; }
-  .top3-table thead th:nth-child(1) { width: 6%; }
-  .top3-table thead th:nth-child(2) { width: 34%; }
-  .top3-table thead th:nth-child(n+3) { width: 20%; }
+  .top3-table { font-size: 14px; }
+  .top3-table thead th:nth-child(1) { width: 4%; }
+  .top3-table thead th:nth-child(2) { width: 13%; }
+  .top3-table thead th:nth-child(3),
+  .top3-table thead th:nth-child(4),
+  .top3-table thead th:nth-child(5) { width: 9%; }
+  .top3-table thead th:nth-child(6) { width: 16%; }
+  .top3-table thead th:nth-child(7) { width: 24%; }
+  .top3-table thead th:nth-child(8) { width: 8%; }
+  .top3-table thead th:nth-child(9) { width: 8%; }
   .top3-table td.rank { font-weight: 800; }
-  .top3-table td.name { text-align: left; font-weight: 600; padding-left: 16px; }
+  .top3-table td.name { font-weight: 700; }
   .top3-table td.pct { font-weight: 800; }
-  .actions-table { font-size: 13.5px; }
 
   /* ---------- Action table ---------- */
   table {
@@ -266,20 +271,13 @@ const DATA = {
       components: { Performance: 77.6, Availability: 70.3, Quality: 93.9 }
     }
   ],
-  // One combined Top 3, ranked by month-to-date; pct values align with
-  // the periods array above (Yesterday, Week to Date, Month to Date).
+  // Top 3 and their actions combined: one row per failure mode, ranked by
+  // month-to-date. pct values align with the periods array above
+  // (Yesterday, Week to Date, Month to Date); the rest is the action.
   top3: [
-    { name: "Damaged Torque",    pct: [12.4, 10.1, 13.6] },
-    { name: "Damaged - Process", pct: [5.3,  4.4,  8.7] },
-    { name: "Focus and Align",   pct: [7.8,  6.2,  6.5] }
-  ],
-  // One combined action list (deduplicated across periods).
-  actions: [
-    { focus: "Damaged Torque",    mode: "Over torque on screw",          cause: "Inconsistent torque wrench calibration", owner: "R. Patel", status: "OPEN" },
-    { focus: "Damaged - Process", mode: "Paint chip on product",         cause: "Handling contact during transfer",       owner: "M. Chen",  status: "OPEN" },
-    { focus: "Focus and Align",   mode: "Misalignment of camera module", cause: "Fixture wear causing misalignment",      owner: "J. Lee",   status: "OPEN" },
-    { focus: "Damaged - Process", mode: "Solder splash on connector",    cause: "Soldering iron tip contamination",       owner: "A. Kim",   status: "CLOSED" },
-    { focus: "Focus and Align",   mode: "Blurred image capture",         cause: "Camera height drift",                    owner: "J. Lee",   status: "CLOSED" }
+    { focus: "Damaged Torque",    pct: [12.4, 10.1, 13.6], mode: "Over torque on screw",          cause: "Inconsistent torque wrench calibration", owner: "R. Patel", status: "OPEN" },
+    { focus: "Damaged - Process", pct: [5.3,  4.4,  8.7],  mode: "Paint chip on product",         cause: "Handling contact during transfer",       owner: "M. Chen",  status: "OPEN" },
+    { focus: "Focus and Align",   pct: [7.8,  6.2,  6.5],  mode: "Misalignment of camera module", cause: "Fixture wear causing misalignment",      owner: "J. Lee",   status: "OPEN" }
   ],
   notes: [
     "OEE = Availability × Performance × Quality",
@@ -402,40 +400,30 @@ function renderPeriod(p) {
 }
 
 function renderCombined() {
-  const top3Rows = DATA.top3.map((t, i) => `
+  const rows = DATA.top3.map((t, i) => `
     <tr>
       <td class="rank">${i + 1}</td>
-      <td class="name">${t.name}</td>
+      <td class="name">${t.focus}</td>
       ${t.pct.map(v => `<td class="pct" style="color:${paretoColor(v)}">${v.toFixed(1)}%</td>`).join("")}
-    </tr>`).join("");
-
-  const actionRows = DATA.actions.map(a => `
-    <tr>
-      <td class="focus">${a.focus}</td>
-      <td>${a.mode}</td>
-      <td>${a.cause}</td>
-      <td>${a.owner}</td>
-      <td><span class="pill ${a.status.toLowerCase()}">${a.status}</span></td>
+      <td>${t.mode}</td>
+      <td>${t.cause}</td>
+      <td>${t.owner}</td>
+      <td><span class="pill ${t.status.toLowerCase()}">${t.status}</span></td>
     </tr>`).join("");
 
   return `
   <div class="combined">
     <div class="panel">
-      <div class="panel-title" style="background:var(--navy)">TOP 3</div>
+      <div class="panel-title" style="background:var(--navy)">TOP 3 &amp; ACTIONS</div>
       <table class="top3-table">
         <thead class="light">
-          <tr><th>#</th><th>Failure Mode</th>${DATA.periods.map(p => `<th>${p.title}</th>`).join("")}</tr>
+          <tr>
+            <th>#</th><th>Focus Area</th>
+            ${DATA.periods.map(p => `<th>${p.title}</th>`).join("")}
+            <th>Failure Mode</th><th>Root Cause Investigation</th><th>Owner</th><th>Status</th>
+          </tr>
         </thead>
-        <tbody>${top3Rows}</tbody>
-      </table>
-    </div>
-    <div class="panel">
-      <div class="panel-title" style="background:var(--navy)">ACTIONS</div>
-      <table class="actions-table">
-        <thead class="light">
-          <tr><th>Focus Area</th><th>Failure Mode</th><th>Root Cause Investigation</th><th>Owner</th><th>Status</th></tr>
-        </thead>
-        <tbody>${actionRows}</tbody>
+        <tbody>${rows}</tbody>
       </table>
     </div>
   </div>`;
