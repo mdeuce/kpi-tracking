@@ -6,20 +6,18 @@
 <title>OEE Combined — Final Assembly</title>
 <style>
   :root {
-    --navy: #16336e;
-    --navy-dark: #0d1f45;
-    --header-blue: #1d3f8f;
-    --header-green: #2e8b3d;
-    --header-purple: #5a4fa8;
+    /* Magna International brand: red #DA291C + neutral gray scale */
+    --brand-red: #da291c;
+    --charcoal: #3a3a3a;
     --status-green: #22a83a;
     --status-amber: #f2a20c;
     --status-amber-text: #e08d00;
     --status-red: #d7263d;
-    --ink: #1a2440;
-    --ink-muted: #46536f;
-    --line: #c9d2e0;
+    --ink: #2b2b2b;
+    --ink-muted: #6b6b6b;
+    --line: #d9d9d9;
     --surface: #ffffff;
-    --page: #f4f6fb;
+    --page: #f7f7f7;
   }
   * { margin: 0; padding: 0; box-sizing: border-box; }
   html { background: var(--page); }
@@ -41,7 +39,7 @@
   }
   .plant-badge {
     display: inline-block;
-    background: var(--header-blue);
+    background: var(--brand-red);
     color: #fff;
     font-weight: 800;
     font-size: 22px;
@@ -54,7 +52,7 @@
     font-size: 44px;
     font-weight: 900;
     letter-spacing: 1px;
-    color: var(--navy-dark);
+    color: var(--charcoal);
     line-height: 1.05;
   }
   /* ---------- Period columns ---------- */
@@ -105,7 +103,7 @@
   .sub-gauge .sub-target {
     font-size: 11.5px;
     font-weight: 700;
-    color: var(--navy);
+    color: var(--charcoal);
     margin-top: 1px;
   }
 
@@ -117,7 +115,7 @@
     margin-top: 18px;
   }
   thead.light th {
-    background: #eef2f9;
+    background: #f0f0f0;
     color: var(--ink-muted);
     border-bottom: 1px solid var(--line);
   }
@@ -235,19 +233,19 @@ const DATA = {
   periods: [
     {
       title: "YESTERDAY",
-      accent: "var(--header-blue)",
+      accent: "var(--charcoal)",
       oee: 78.6,
       components: { Performance: 82.3, Availability: 74.1, Quality: 96.2 }
     },
     {
       title: "WEEK TO DATE",
-      accent: "var(--header-green)",
+      accent: "var(--charcoal)",
       oee: 86.9,
       components: { Performance: 89.4, Availability: 85.7, Quality: 97.2 }
     },
     {
       title: "MONTH TO DATE",
-      accent: "var(--header-purple)",
+      accent: "var(--charcoal)",
       oee: 72.3,
       components: { Performance: 77.6, Availability: 70.3, Quality: 93.9 }
     }
@@ -342,7 +340,7 @@ function gaugeSVG(value, { size = "main", target = DATA.thresholds.good } = {}) 
     });
     // center labels
     s += `<text x="${cx}" y="${cy - 4}" text-anchor="middle" font-size="40" font-weight="900" fill="${statusColor(value)}">${value.toFixed(1)}%</text>`;
-    s += `<text x="${cx}" y="${cy + 20}" text-anchor="middle" font-size="13.5" font-weight="700" fill="var(--navy)">Target ${+target.toFixed(1)}%</text>`;
+    s += `<text x="${cx}" y="${cy + 20}" text-anchor="middle" font-size="13.5" font-weight="700" fill="var(--charcoal)">Target ${+target.toFixed(1)}%</text>`;
   }
 
   // needle
@@ -394,7 +392,7 @@ function renderCombined() {
   return `
   <div class="combined">
     <div class="panel">
-      <div class="panel-title" style="background:var(--navy)">TOP 3 ACTIONS</div>
+      <div class="panel-title" style="background:var(--brand-red)">TOP 3 ACTIONS</div>
       <table class="top3-table">
         <thead class="light">
           <tr>
