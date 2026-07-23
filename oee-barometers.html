@@ -302,8 +302,8 @@ const MAX = DATA.scaleMax;
 const SWEEP = 230;                 // total gauge sweep in degrees
 const START = -SWEEP / 2;          // degrees from vertical (0 = straight up)
 
-function statusColor(v) {
-  if (v >= DATA.thresholds.good) return "var(--status-green)";
+function statusColor(v, good = DATA.thresholds.good) {
+  if (v >= good) return "var(--status-green)";
   if (v >= DATA.thresholds.warn) return "var(--status-amber-text)";
   return "var(--status-red)";
 }
@@ -326,13 +326,17 @@ function bandPath(cx, cy, rOuter, rInner, v0, v1) {
          `L ${x3} ${y3} A ${rInner} ${rInner} 0 ${large} 0 ${x4} ${y4} Z`;
 }
 
-const BANDS = [
-  { from: 0,  to: 60,  color: "var(--status-red)" },
-  { from: 60, to: 80,  color: "var(--status-amber)" },
-  { from: 80, to: 110, color: "var(--status-green)" }
-];
+// The green band starts at the gauge's target — the band edge IS the
+// target indicator, so no separate marker is drawn.
+function bandsFor(target) {
+  return [
+    { from: 0,                    to: DATA.thresholds.warn, color: "var(--status-red)" },
+    { from: DATA.thresholds.warn, to: target,               color: "var(--status-amber)" },
+    { from: target,               to: MAX,                  color: "var(--status-green)" }
+  ];
+}
 
-function gaugeSVG(value, { size = "main", target = null } = {}) {
+function gaugeSVG(value, { size = "main", target = DATA.thresholds.good } = {}) {
   const main = size === "main";
   const W = main ? 380 : 120;
   const cx = W / 2;
@@ -344,7 +348,7 @@ function gaugeSVG(value, { size = "main", target = null } = {}) {
   let s = `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Gauge showing ${value}%">`;
 
   // colored bands with a small white gap between them
-  BANDS.forEach(b => {
+  bandsFor(target).forEach(b => {
     s += `<path d="${bandPath(cx, cy, R, rI, b.from, b.to)}" fill="${b.color}" stroke="var(--surface)" stroke-width="${main ? 2 : 1.2}"></path>`;
   });
 
@@ -368,22 +372,7 @@ function gaugeSVG(value, { size = "main", target = null } = {}) {
     // center labels
     s += `<text x="${cx}" y="${cy - 34}" text-anchor="middle" font-size="24" font-weight="800" fill="var(--ink)">OEE</text>`;
     s += `<text x="${cx}" y="${cy + 4}" text-anchor="middle" font-size="38" font-weight="900" fill="${statusColor(value)}">${value.toFixed(1)}%</text>`;
-    if (target != null) {
-      s += `<text x="${cx}" y="${cy + 26}" text-anchor="middle" font-size="13.5" font-weight="700" fill="var(--navy)">Target ${+target.toFixed(1)}%</text>`;
-    }
-  }
-
-  // target marker: navy tick across the band with a small pointer above it
-  if (target != null) {
-    const ta = angleFor(target);
-    const [m1x, m1y] = pt(cx, cy, rI - (main ? 4 : 2), ta);
-    const [m2x, m2y] = pt(cx, cy, R + (main ? 7 : 4), ta);
-    s += `<line x1="${m1x}" y1="${m1y}" x2="${m2x}" y2="${m2y}" stroke="var(--navy)" stroke-width="${main ? 3.5 : 2.5}" stroke-linecap="round"></line>`;
-    const tipR = R + (main ? 8 : 5), backR = R + (main ? 16 : 10), spread = main ? 2.6 : 4.5;
-    const [p1x, p1y] = pt(cx, cy, tipR, ta);
-    const [p2x, p2y] = pt(cx, cy, backR, ta - spread);
-    const [p3x, p3y] = pt(cx, cy, backR, ta + spread);
-    s += `<polygon points="${p1x},${p1y} ${p2x},${p2y} ${p3x},${p3y}" fill="var(--navy)"></polygon>`;
+    s += `<text x="${cx}" y="${cy + 26}" text-anchor="middle" font-size="13.5" font-weight="700" fill="var(--navy)">Target ${+target.toFixed(1)}%</text>`;
   }
 
   // needle
@@ -406,7 +395,7 @@ function renderPeriod(p) {
     <div class="sub-gauge">
       <div class="sub-name">${name}</div>
       ${gaugeSVG(v, { size: "sub", target: DATA.targets[name] })}
-      <div class="sub-value" style="color:${statusColor(v)}">${v.toFixed(1)}%</div>
+      <div class="sub-value" style="color:${statusColor(v, DATA.targets[name])}">${v.toFixed(1)}%</div>
       <div class="sub-target">Target ${+DATA.targets[name].toFixed(1)}%</div>
     </div>`).join("");
 
