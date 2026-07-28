@@ -1,0 +1,610 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>OEE Editable — Final Assembly</title>
+<style>
+  :root {
+    --navy: #16336e;
+    --navy-dark: #0d1f45;
+    --header-blue: #1d3f8f;
+    --header-green: #2e8b3d;
+    --header-purple: #5a4fa8;
+    --status-green: #22a83a;
+    --status-amber: #f2a20c;
+    --status-amber-text: #e08d00;
+    --status-red: #d7263d;
+    --ink: #1a2440;
+    --ink-muted: #46536f;
+    --line: #c9d2e0;
+    --surface: #ffffff;
+    --page: #f4f6fb;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html { background: var(--page); }
+  html, body { height: 100%; }
+  body {
+    font-family: "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+    background: var(--page);
+    color: var(--ink);
+    padding: 0.8vh 0.7vw;
+    overflow: hidden;
+  }
+  /* The board fills the viewport: header and tables take what they need,
+     the main gauges absorb whatever vertical space is left over. */
+  .board {
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    gap: 0.9vh;
+  }
+
+  /* ---------- Top header ---------- */
+  .board-header {
+    display: grid;
+    grid-template-columns: 1fr auto 1fr;
+    align-items: center;
+    gap: 16px;
+  }
+  .plant-badge {
+    display: inline-block;
+    background: var(--header-blue);
+    color: #fff;
+    font-weight: 800;
+    font-size: clamp(14px, 1.35vw, 26px);
+    letter-spacing: 0.5px;
+    padding: 0.7vh 1.4vw;
+    border-radius: 6px;
+  }
+  .board-title { text-align: center; }
+  .board-title h1 {
+    font-size: clamp(26px, 2.9vw, 58px);
+    font-weight: 900;
+    letter-spacing: 1px;
+    color: var(--navy-dark);
+    line-height: 1.05;
+  }
+  /* ---------- Period columns ---------- */
+  /* Two grid rows — gauges (fills the slack) and tables (natural height) —
+     so all three columns line up no matter how their text wraps. */
+  .columns {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 0.8vw;
+  }
+  .columns.gauges-row { flex: 1; min-height: 0; }
+  .columns.tables-row { flex: 0 0 auto; }
+  .panel {
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    overflow: hidden;
+  }
+  .panel.gauges {
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+  }
+  .panel-title {
+    color: #fff;
+    text-align: center;
+    font-weight: 800;
+    font-size: clamp(13px, 1.15vw, 22px);
+    letter-spacing: 0.6px;
+    padding: 0.7vh 10px;
+  }
+
+  /* ---------- Gauges ---------- */
+  .gauge-main {
+    flex: 1;
+    min-height: 0;
+    padding: 0.5vh 10px 0.2vh;
+  }
+  .gauge-main svg { display: block; width: 100%; height: 100%; }
+  .sub-gauges {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    border-top: 1px solid var(--line);
+    flex: 0 0 auto;
+    height: 22vh;
+  }
+  .sub-gauge {
+    padding: 0.7vh 4px 0.8vh;
+    text-align: center;
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+  }
+  .sub-gauge + .sub-gauge { border-left: 1px solid var(--line); }
+  .sub-gauge .sub-name {
+    font-size: clamp(10px, 0.8vw, 16px);
+    font-weight: 800;
+    letter-spacing: 0.6px;
+    text-transform: uppercase;
+    color: var(--ink);
+    margin-bottom: 2px;
+  }
+  .sub-gauge svg { display: block; width: 100%; height: 100%; flex: 1; min-height: 0; }
+  .sub-gauge .sub-value { font-size: clamp(14px, 1.25vw, 26px); font-weight: 800; margin-top: 1px; }
+  .sub-gauge .sub-target {
+    font-size: clamp(9px, 0.72vw, 15px);
+    font-weight: 700;
+    color: var(--navy);
+    margin-top: 1px;
+  }
+
+  /* ---------- Per-period Top 3 Actions table ---------- */
+  thead.light th {
+    background: #eef2f9;
+    color: var(--ink-muted);
+    border-bottom: 1px solid var(--line);
+  }
+  .top3-table { font-size: clamp(10px, 0.76vw, 16px); }
+  .top3-table thead th { padding: 0.6vh 5px; }
+  .top3-table tbody td { padding: 0.9vh 5px; }
+  .top3-table thead th:nth-child(1) { width: 6%; }
+  .top3-table thead th:nth-child(2) { width: 18%; }
+  .top3-table thead th:nth-child(3) { width: 9%; }
+  .top3-table thead th:nth-child(4) { width: 20%; }
+  .top3-table thead th:nth-child(5) { width: 23%; }
+  .top3-table thead th:nth-child(6) { width: 11%; }
+  .top3-table thead th:nth-child(7) { width: 13%; }
+  .top3-table .pill { font-size: clamp(8.5px, 0.62vw, 13px); padding: 3px 5px; letter-spacing: 0.2px; }
+  .top3-table td.rank { font-weight: 800; }
+  .top3-table td.name { font-weight: 700; }
+  .top3-table td.pct { font-weight: 800; }
+  /* ---------- Inline editing ---------- */
+  .edit-hint {
+    justify-self: end;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: clamp(10px, 0.72vw, 14px);
+    color: var(--ink-muted);
+  }
+  .btn-reset {
+    font: inherit;
+    font-weight: 700;
+    color: var(--ink);
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: 6px;
+    padding: 5px 11px;
+    cursor: pointer;
+  }
+  .btn-reset:hover { background: #eef2f9; }
+  td.edit { cursor: text; }
+  td.edit:hover { background: #eef4fd; box-shadow: inset 0 0 0 1px #b9c8e2; }
+  td.edit:focus {
+    outline: 2px solid var(--header-blue);
+    outline-offset: -2px;
+    background: #fff;
+    box-shadow: none;
+  }
+  td.edit.saved { animation: flash 0.6s ease-out; }
+  @keyframes flash { from { background: #d8f0dd; } to { background: transparent; } }
+  .pill.editable { cursor: pointer; user-select: none; }
+  .pill.editable:hover { box-shadow: 0 0 0 2px rgba(29, 63, 143, 0.18); }
+
+  /* Focus Area, Failure Mode and Root Cause read left-aligned */
+  .top3-table thead th:nth-child(2),
+  .top3-table thead th:nth-child(4),
+  .top3-table thead th:nth-child(5),
+  .top3-table tbody td:nth-child(2),
+  .top3-table tbody td:nth-child(4),
+  .top3-table tbody td:nth-child(5) {
+    text-align: left;
+    padding-left: 8px;
+  }
+
+  /* ---------- Action table ---------- */
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 12.5px;
+    table-layout: fixed;
+  }
+  thead th {
+    color: #fff;
+    font-weight: 700;
+    text-transform: uppercase;
+    font-size: 11px;
+    letter-spacing: 0.3px;
+    padding: 8px 6px;
+    text-align: center;
+  }
+  thead th:nth-child(1) { width: 19%; }
+  thead th:nth-child(2) { width: 24%; }
+  thead th:nth-child(3) { width: 28%; }
+  thead th:nth-child(4) { width: 14%; }
+  thead th:nth-child(5) { width: 15%; }
+  tbody td {
+    border: 1px solid var(--line);
+    padding: 8px 7px;
+    text-align: center;
+    vertical-align: middle;
+    line-height: 1.3;
+  }
+  tbody td.focus { font-weight: 700; }
+  .pill {
+    display: inline-block;
+    font-weight: 800;
+    font-size: 10.5px;
+    letter-spacing: 0.4px;
+    padding: 3px 7px;
+    border-radius: 4px;
+    border: 1.5px solid;
+  }
+  .pill.open   { color: var(--status-red);   border-color: var(--status-red); }
+  .pill.closed { color: var(--status-green); border-color: var(--status-green); }
+
+  @media (max-width: 1100px) {
+    body { overflow: auto; }
+    html, body { height: auto; }
+    .board { height: auto; }
+    .columns { grid-template-columns: 1fr; grid-template-rows: none; }
+    .board-header { grid-template-columns: 1fr; justify-items: center; text-align: center; }
+    .sub-gauges { height: auto; }
+    .sub-gauge svg { height: auto; }
+  }
+</style>
+</head>
+<body>
+<div class="board" id="board"></div>
+
+<script>
+/* =========================================================================
+   MOCK DATA — everything the board renders lives in this one object.
+   Swap these values (or later, fetch real data into the same shape)
+   and the gauges, lists and tables re-render from it.
+   ========================================================================= */
+const DATA = {
+  plant: "FINAL ASSEMBLY",
+  title: "OEE",
+  scaleMax: 110,               // OEE evaluated up to 110%
+  // Status thresholds: >= good → green, >= warn → amber, else red
+  thresholds: { good: 80, warn: 60 },
+  // Targets shown as markers on the gauges.
+  // Quality follows from the OEE math: 80% / (90% × 90%) ≈ 98.8%
+  targets: { OEE: 80, Performance: 90, Availability: 90, Quality: 98.8 },
+  periods: [
+    {
+      title: "YESTERDAY",
+      accent: "var(--header-blue)",
+      oee: 78.6,
+      components: { Performance: 82.3, Availability: 74.1, Quality: 96.2 },
+      // Top 3 and their actions combined: one row per failure mode.
+      top3: [
+        { focus: "Damaged Torque",    pct: 12.4, mode: "Over torque on screw",          cause: "Torque setting out of specification", owner: "R. Patel", status: "OPEN" },
+        { focus: "Focus and Align",   pct: 7.8,  mode: "Misalignment of camera module", cause: "Fixture wear causing misalignment",   owner: "J. Lee",   status: "OPEN" },
+        { focus: "Damaged - Process", pct: 5.3,  mode: "Scratch on housing surface",    cause: "Conveyor contact damage",             owner: "M. Chen",  status: "CLOSED" }
+      ]
+    },
+    {
+      title: "WEEK TO DATE",
+      accent: "var(--header-green)",
+      oee: 86.9,
+      components: { Performance: 89.4, Availability: 85.7, Quality: 97.2 },
+      top3: [
+        { focus: "Damaged Torque",    pct: 10.1, mode: "Over torque on screw",          cause: "Operator not following torque standard", owner: "R. Patel", status: "OPEN" },
+        { focus: "Focus and Align",   pct: 6.2,  mode: "Misalignment of camera module", cause: "Fixture wear causing misalignment",      owner: "J. Lee",   status: "OPEN" },
+        { focus: "Damaged - Process", pct: 4.4,  mode: "Solder splash on connector",    cause: "Soldering iron tip contamination",       owner: "A. Kim",   status: "CLOSED" }
+      ]
+    },
+    {
+      title: "MONTH TO DATE",
+      accent: "var(--header-purple)",
+      oee: 72.3,
+      components: { Performance: 77.6, Availability: 70.3, Quality: 93.9 },
+      top3: [
+        { focus: "Damaged Torque",    pct: 13.6, mode: "Over torque on screw",  cause: "Inconsistent torque wrench calibration", owner: "R. Patel", status: "OPEN" },
+        { focus: "Damaged - Process", pct: 8.7,  mode: "Paint chip on product", cause: "Handling contact during transfer",       owner: "M. Chen",  status: "OPEN" },
+        { focus: "Focus and Align",   pct: 6.5,  mode: "Blurred image capture", cause: "Camera height drift",                    owner: "J. Lee",   status: "CLOSED" }
+      ]
+    }
+  ]
+};
+
+/* =========================================================================
+   Rendering
+   ========================================================================= */
+const MAX = DATA.scaleMax;
+const SWEEP = 230;                 // total gauge sweep in degrees
+const START = -SWEEP / 2;          // degrees from vertical (0 = straight up)
+
+function statusColor(v, good = DATA.thresholds.good) {
+  if (v >= good) return "var(--status-green)";
+  if (v >= DATA.thresholds.warn) return "var(--status-amber-text)";
+  return "var(--status-red)";
+}
+function paretoColor(pct) {
+  return pct >= 10 ? "var(--status-red)" : "var(--status-amber-text)";
+}
+function angleFor(v) { return START + (Math.min(v, MAX) / MAX) * SWEEP; }
+function pt(cx, cy, r, deg) {
+  const a = deg * Math.PI / 180;
+  return [cx + r * Math.sin(a), cy - r * Math.cos(a)];
+}
+function bandPath(cx, cy, rOuter, rInner, v0, v1) {
+  const a0 = angleFor(v0), a1 = angleFor(v1);
+  const large = (a1 - a0) > 180 ? 1 : 0;
+  const [x1, y1] = pt(cx, cy, rOuter, a0);
+  const [x2, y2] = pt(cx, cy, rOuter, a1);
+  const [x3, y3] = pt(cx, cy, rInner, a1);
+  const [x4, y4] = pt(cx, cy, rInner, a0);
+  return `M ${x1} ${y1} A ${rOuter} ${rOuter} 0 ${large} 1 ${x2} ${y2} ` +
+         `L ${x3} ${y3} A ${rInner} ${rInner} 0 ${large} 0 ${x4} ${y4} Z`;
+}
+
+// The green band starts at the gauge's target — the band edge IS the
+// target indicator, so no separate marker is drawn.
+function bandsFor(target) {
+  return [
+    { from: 0,                    to: DATA.thresholds.warn, color: "var(--status-red)" },
+    { from: DATA.thresholds.warn, to: target,               color: "var(--status-amber)" },
+    { from: target,               to: MAX,                  color: "var(--status-green)" }
+  ];
+}
+
+function gaugeSVG(value, { size = "main", target = DATA.thresholds.good } = {}) {
+  const main = size === "main";
+  const W = main ? 380 : 120;
+  const cx = W / 2;
+  const R  = main ? 118 : 46;
+  const rI = main ? R - 26 : R - 15;
+  const cy = main ? 138 : 54;
+  const H  = main ? cy + R * 0.58 : cy + R * 0.46;
+
+  let s = `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Gauge showing ${value}%">`;
+
+  // colored bands with a small white gap between them
+  bandsFor(target).forEach(b => {
+    s += `<path d="${bandPath(cx, cy, R, rI, b.from, b.to)}" fill="${b.color}" stroke="var(--surface)" stroke-width="${main ? 2 : 1.2}"></path>`;
+  });
+
+  // ticks (main gauge only)
+  if (main) {
+    for (let v = 0; v <= MAX; v += 5) {
+      const majorTick = v % 25 === 0 || v === MAX;
+      const a = angleFor(v);
+      const [x1, y1] = pt(cx, cy, R, a);
+      const [x2, y2] = pt(cx, cy, R - (majorTick ? 10 : 5), a);
+      s += `<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" stroke="#25314f" stroke-width="${majorTick ? 2 : 1}" opacity="0.85"></line>`;
+    }
+    // scale labels
+    const labels = [0, 25, 50, 75, 100, 110];
+    labels.forEach(v => {
+      const a = angleFor(v);
+      const [x, y] = pt(cx, cy, R + 17, a);
+      const anchor = a < -12 ? "end" : a > 12 ? "start" : "middle";
+      s += `<text x="${x}" y="${y + 4}" font-size="13" font-weight="700" fill="var(--ink)" text-anchor="${anchor}">${v}%</text>`;
+    });
+    // center labels
+    s += `<text x="${cx}" y="${cy - 4}" text-anchor="middle" font-size="40" font-weight="900" fill="${statusColor(value)}">${value.toFixed(1)}%</text>`;
+    s += `<text x="${cx}" y="${cy + 20}" text-anchor="middle" font-size="13.5" font-weight="700" fill="var(--navy)">Target ${+target.toFixed(1)}%</text>`;
+  }
+
+  // needle
+  const a = angleFor(value);
+  const len = main ? rI - 32 : rI - 6;
+  const base = main ? 55 : 8;   // needle starts away from center on main gauge
+  const [tx, ty] = pt(cx, cy, len + base, a);
+  const [bx, by] = pt(cx, cy, base, a);
+  const [w1x, w1y] = pt(cx, cy, base + 4, a - (main ? 4 : 8));
+  const [w2x, w2y] = pt(cx, cy, base + 4, a + (main ? 4 : 8));
+  s += `<polygon points="${bx},${by} ${w1x},${w1y} ${tx},${ty} ${w2x},${w2y}" fill="#1c2333"></polygon>`;
+  if (!main) s += `<circle cx="${cx}" cy="${cy}" r="3.5" fill="#1c2333"></circle>`;
+
+  s += `</svg>`;
+  return s;
+}
+
+function renderPeriod(p) {
+  const subGauges = Object.entries(p.components).map(([name, v]) => `
+    <div class="sub-gauge">
+      <div class="sub-name">${name}</div>
+      ${gaugeSVG(v, { size: "sub", target: DATA.targets[name] })}
+      <div class="sub-value" style="color:${statusColor(v, DATA.targets[name])}">${v.toFixed(1)}%</div>
+      <div class="sub-target">Target ${+DATA.targets[name].toFixed(1)}%</div>
+    </div>`).join("");
+
+  return `
+  <div class="panel gauges">
+    <div class="panel-title" style="background:${p.accent}">${p.title}</div>
+    <div class="gauge-main">${gaugeSVG(p.oee, { target: DATA.targets.OEE })}</div>
+    <div class="sub-gauges">${subGauges}</div>
+  </div>`;
+}
+
+// Editable cell. `field` names the property on the row object; the cell
+// carries its own address (period index, row index) so edits can be
+// written straight back into DATA.
+function cell(pi, ri, field, text, extraClass = "", style = "") {
+  return `<td class="edit ${extraClass}" contenteditable="true" spellcheck="false"
+    data-p="${pi}" data-r="${ri}" data-f="${field}" style="${style}">${text}</td>`;
+}
+
+function renderTable(p, pi) {
+  const rows = p.top3.map((t, i) => `
+    <tr>
+      <td class="rank">${i + 1}</td>
+      ${cell(pi, i, "focus", t.focus, "name")}
+      ${cell(pi, i, "pct", t.pct.toFixed(1) + "%", "pct", `color:${paretoColor(t.pct)}`)}
+      ${cell(pi, i, "mode", t.mode)}
+      ${cell(pi, i, "cause", t.cause)}
+      ${cell(pi, i, "owner", t.owner)}
+      <td>
+        <span class="pill editable ${t.status.toLowerCase()}" data-p="${pi}" data-r="${i}"
+              role="button" tabindex="0" title="Click to toggle Open / Closed">${t.status}</span>
+      </td>
+    </tr>`).join("");
+
+  return `
+  <div class="panel">
+    <div class="panel-title" style="background:${p.accent}">TOP 3 ACTIONS</div>
+    <table class="top3-table">
+      <thead class="light">
+        <tr>
+          <th>#</th><th>Focus Area</th><th>%</th>
+          <th>Failure Mode</th><th>Root Cause</th><th>Owner</th><th>Status</th>
+        </tr>
+      </thead>
+      <tbody>${rows}</tbody>
+    </table>
+  </div>`;
+}
+
+function render() {
+  document.getElementById("board").innerHTML = `
+    <header class="board-header">
+      <div>
+        <span class="plant-badge">${DATA.plant}</span>
+      </div>
+      <div class="board-title">
+        <h1>${DATA.title}</h1>
+      </div>
+      <div class="edit-hint">
+        <span>Click any table cell to edit</span>
+        <button class="btn-reset" id="reset">Reset</button>
+      </div>
+    </header>
+
+    <div class="columns gauges-row">
+      ${DATA.periods.map(renderPeriod).join("")}
+    </div>
+    <div class="columns tables-row" id="tables">
+      ${DATA.periods.map(renderTable).join("")}
+    </div>`;
+
+  document.getElementById("reset").addEventListener("click", resetEdits);
+}
+
+/* =========================================================================
+   Inline editing — Focus Area, %, Failure Mode, Root Cause, Owner, Status.
+   Edits are written back into DATA and kept in localStorage so a refresh
+   doesn't lose them. Reset restores the mock data defined above.
+   ========================================================================= */
+const STORE_KEY = "oee-board-edits-v1";
+
+function saveEdits() {
+  try {
+    localStorage.setItem(STORE_KEY, JSON.stringify(DATA.periods.map(p => p.top3)));
+  } catch (e) { /* private browsing / storage disabled — edits stay in memory */ }
+}
+
+function loadEdits() {
+  try {
+    const saved = JSON.parse(localStorage.getItem(STORE_KEY) || "null");
+    if (Array.isArray(saved)) {
+      saved.forEach((top3, i) => {
+        if (DATA.periods[i] && Array.isArray(top3)) DATA.periods[i].top3 = top3;
+      });
+    }
+  } catch (e) { /* ignore malformed storage */ }
+}
+
+function resetEdits() {
+  try { localStorage.removeItem(STORE_KEY); } catch (e) {}
+  location.reload();
+}
+
+function renderTables() {
+  document.getElementById("tables").innerHTML = DATA.periods.map(renderTable).join("");
+}
+
+// Returns true when the value actually changed and was valid.
+function commitEdit(pi, ri, field, raw) {
+  const row = DATA.periods[pi] && DATA.periods[pi].top3[ri];
+  if (!row) return false;
+
+  if (field === "pct") {
+    const n = parseFloat(String(raw).replace(/[^0-9.]/g, ""));
+    if (!isFinite(n)) return false;                  // unparseable — revert
+    // Round to the one decimal the board displays, so what is stored
+    // matches what is shown.
+    const clamped = Math.round(Math.min(100, Math.max(0, n)) * 10) / 10;
+    if (clamped === row.pct) return false;
+    row.pct = clamped;
+  } else {
+    const text = String(raw).replace(/\s+/g, " ").trim();
+    if (!text || text === row[field]) return false;  // empty — revert
+    row[field] = text;
+  }
+  saveEdits();
+  return true;
+}
+
+// Re-render the tables, then flash the cell that was just saved.
+function refreshAfterEdit(pi, ri, field) {
+  renderTables();
+  const sel = `td.edit[data-p="${pi}"][data-r="${ri}"][data-f="${field}"]`;
+  const el = document.querySelector(sel);
+  if (el) el.classList.add("saved");
+}
+
+const board = document.getElementById("board");
+
+// Remember the original text so Escape can restore it and blur can tell
+// whether anything actually changed.
+board.addEventListener("focusin", e => {
+  const td = e.target.closest && e.target.closest("td.edit");
+  if (td) td.dataset.orig = td.textContent.trim();
+});
+
+board.addEventListener("keydown", e => {
+  const td = e.target.closest && e.target.closest("td.edit");
+  if (!td) return;
+  if (e.key === "Enter") {
+    e.preventDefault();
+    td.blur();
+  } else if (e.key === "Escape") {
+    e.preventDefault();
+    td.textContent = td.dataset.orig || "";
+    td.dataset.cancelled = "1";
+    td.blur();
+  }
+});
+
+board.addEventListener("focusout", e => {
+  const td = e.target.closest && e.target.closest("td.edit");
+  if (!td) return;
+  const { p, r, f } = td.dataset;
+  if (td.dataset.cancelled === "1") {
+    delete td.dataset.cancelled;
+    renderTables();
+    return;
+  }
+  const value = td.textContent.trim();
+  if (value === td.dataset.orig) return;             // nothing typed
+  if (commitEdit(+p, +r, f, value)) refreshAfterEdit(+p, +r, f);
+  else renderTables();                               // invalid — restore
+});
+
+// Status is a two-state field, so it toggles on click (or Enter/Space).
+function toggleStatus(pill) {
+  const { p, r } = pill.dataset;
+  const row = DATA.periods[+p].top3[+r];
+  row.status = row.status === "OPEN" ? "CLOSED" : "OPEN";
+  saveEdits();
+  renderTables();
+}
+
+board.addEventListener("click", e => {
+  const pill = e.target.closest && e.target.closest(".pill.editable");
+  if (pill) toggleStatus(pill);
+});
+
+board.addEventListener("keydown", e => {
+  const pill = e.target.closest && e.target.closest(".pill.editable");
+  if (pill && (e.key === "Enter" || e.key === " ")) {
+    e.preventDefault();
+    toggleStatus(pill);
+  }
+});
+
+loadEdits();
+render();
+</script>
+</body>
+</html>
