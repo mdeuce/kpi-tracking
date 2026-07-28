@@ -187,6 +187,40 @@
   .pill.editable { cursor: pointer; user-select: none; }
   .pill.editable:hover { box-shadow: 0 0 0 2px rgba(29, 63, 143, 0.18); }
 
+  /* Editable gauge readouts */
+  .sub-value.edit {
+    cursor: text;
+    border-radius: 4px;
+    margin: 0 6px;
+  }
+  .sub-value.edit:hover { background: #eef4fd; box-shadow: inset 0 0 0 1px #b9c8e2; }
+  .sub-value.edit:focus {
+    outline: 2px solid var(--header-blue);
+    outline-offset: -2px;
+    background: #fff;
+    box-shadow: none;
+  }
+  .sub-value.edit.saved { animation: flash 0.6s ease-out; }
+  text.gauge-value { cursor: pointer; }
+  text.gauge-value:hover { text-decoration: underline; text-decoration-thickness: 2px; }
+  text.gauge-value:focus { outline: none; text-decoration: underline; text-decoration-thickness: 2px; }
+  .value-editor {
+    position: fixed;
+    transform: translate(-50%, -50%);
+    z-index: 20;
+    font-family: inherit;
+    font-size: clamp(18px, 1.7vw, 36px);
+    font-weight: 900;
+    text-align: center;
+    color: var(--ink);
+    background: #fff;
+    border: 2px solid var(--header-blue);
+    border-radius: 8px;
+    padding: 2px 6px;
+    box-shadow: 0 8px 24px rgba(13, 31, 69, 0.22);
+  }
+  .value-editor:focus { outline: none; }
+
   /* Focus Area, Failure Mode and Root Cause read left-aligned */
   .top3-table thead th:nth-child(2),
   .top3-table thead th:nth-child(4),
@@ -347,7 +381,7 @@ function bandsFor(target) {
   ];
 }
 
-function gaugeSVG(value, { size = "main", target = DATA.thresholds.good } = {}) {
+function gaugeSVG(value, { size = "main", target = DATA.thresholds.good, editP = null } = {}) {
   const main = size === "main";
   const W = main ? 380 : 120;
   const cx = W / 2;
@@ -380,8 +414,10 @@ function gaugeSVG(value, { size = "main", target = DATA.thresholds.good } = {}) 
       const anchor = a < -12 ? "end" : a > 12 ? "start" : "middle";
       s += `<text x="${x}" y="${y + 4}" font-size="13" font-weight="700" fill="var(--ink)" text-anchor="${anchor}">${v}%</text>`;
     });
-    // center labels
-    s += `<text x="${cx}" y="${cy - 4}" text-anchor="middle" font-size="40" font-weight="900" fill="${statusColor(value)}">${value.toFixed(1)}%</text>`;
+    // center labels — the value is click-to-edit when the gauge is given an address
+    const editAttrs = editP == null ? "" :
+      ` class="gauge-value" data-p="${editP}" data-f="oee" tabindex="0" role="button"`;
+    s += `<text x="${cx}" y="${cy - 4}" text-anchor="middle" font-size="40" font-weight="900" fill="${statusColor(value)}"${editAttrs}>${value.toFixed(1)}%</text>`;
     s += `<text x="${cx}" y="${cy + 20}" text-anchor="middle" font-size="13.5" font-weight="700" fill="var(--navy)">Target ${+target.toFixed(1)}%</text>`;
   }
 
@@ -400,19 +436,21 @@ function gaugeSVG(value, { size = "main", target = DATA.thresholds.good } = {}) 
   return s;
 }
 
-function renderPeriod(p) {
+function renderPeriod(p, pi) {
   const subGauges = Object.entries(p.components).map(([name, v]) => `
     <div class="sub-gauge">
       <div class="sub-name">${name}</div>
       ${gaugeSVG(v, { size: "sub", target: DATA.targets[name] })}
-      <div class="sub-value" style="color:${statusColor(v, DATA.targets[name])}">${v.toFixed(1)}%</div>
+      <div class="sub-value edit" contenteditable="true" spellcheck="false"
+           data-kind="gauge" data-p="${pi}" data-f="${name}"
+           style="color:${statusColor(v, DATA.targets[name])}">${v.toFixed(1)}%</div>
       <div class="sub-target">Target ${+DATA.targets[name].toFixed(1)}%</div>
     </div>`).join("");
 
   return `
   <div class="panel gauges">
     <div class="panel-title" style="background:${p.accent}">${p.title}</div>
-    <div class="gauge-main">${gaugeSVG(p.oee, { target: DATA.targets.OEE })}</div>
+    <div class="gauge-main">${gaugeSVG(p.oee, { target: DATA.targets.OEE, editP: pi })}</div>
     <div class="sub-gauges">${subGauges}</div>
   </div>`;
 }
@@ -422,7 +460,7 @@ function renderPeriod(p) {
 // written straight back into DATA.
 function cell(pi, ri, field, text, extraClass = "", style = "") {
   return `<td class="edit ${extraClass}" contenteditable="true" spellcheck="false"
-    data-p="${pi}" data-r="${ri}" data-f="${field}" style="${style}">${text}</td>`;
+    data-kind="cell" data-p="${pi}" data-r="${ri}" data-f="${field}" style="${style}">${text}</td>`;
 }
 
 function renderTable(p, pi) {
@@ -465,12 +503,12 @@ function render() {
         <h1>${DATA.title}</h1>
       </div>
       <div class="edit-hint">
-        <span>Click any table cell to edit</span>
+        <span>Click any value to edit</span>
         <button class="btn-reset" id="reset">Reset</button>
       </div>
     </header>
 
-    <div class="columns gauges-row">
+    <div class="columns gauges-row" id="gauges">
       ${DATA.periods.map(renderPeriod).join("")}
     </div>
     <div class="columns tables-row" id="tables">
@@ -485,22 +523,26 @@ function render() {
    Edits are written back into DATA and kept in localStorage so a refresh
    doesn't lose them. Reset restores the mock data defined above.
    ========================================================================= */
-const STORE_KEY = "oee-board-edits-v1";
+const STORE_KEY = "oee-board-edits-v2";
 
 function saveEdits() {
   try {
-    localStorage.setItem(STORE_KEY, JSON.stringify(DATA.periods.map(p => p.top3)));
+    const payload = DATA.periods.map(p => ({ oee: p.oee, components: p.components, top3: p.top3 }));
+    localStorage.setItem(STORE_KEY, JSON.stringify(payload));
   } catch (e) { /* private browsing / storage disabled — edits stay in memory */ }
 }
 
 function loadEdits() {
   try {
     const saved = JSON.parse(localStorage.getItem(STORE_KEY) || "null");
-    if (Array.isArray(saved)) {
-      saved.forEach((top3, i) => {
-        if (DATA.periods[i] && Array.isArray(top3)) DATA.periods[i].top3 = top3;
-      });
-    }
+    if (!Array.isArray(saved)) return;
+    saved.forEach((s, i) => {
+      const p = DATA.periods[i];
+      if (!p || !s) return;
+      if (typeof s.oee === "number") p.oee = s.oee;
+      if (s.components) Object.assign(p.components, s.components);
+      if (Array.isArray(s.top3)) p.top3 = s.top3;
+    });
   } catch (e) { /* ignore malformed storage */ }
 }
 
@@ -511,6 +553,29 @@ function resetEdits() {
 
 function renderTables() {
   document.getElementById("tables").innerHTML = DATA.periods.map(renderTable).join("");
+}
+
+function renderGauges() {
+  document.getElementById("gauges").innerHTML = DATA.periods.map(renderPeriod).join("");
+}
+
+// Gauge values (OEE and the three components) share one parser: numeric,
+// clamped to the 0–110 scale and rounded to the displayed decimal.
+function commitGauge(pi, field, raw) {
+  const p = DATA.periods[pi];
+  if (!p) return false;
+  const n = parseFloat(String(raw).replace(/[^0-9.]/g, ""));
+  if (!isFinite(n)) return false;
+  const v = Math.round(Math.min(DATA.scaleMax, Math.max(0, n)) * 10) / 10;
+  if (field === "oee") {
+    if (v === p.oee) return false;
+    p.oee = v;
+  } else {
+    if (!(field in p.components) || v === p.components[field]) return false;
+    p.components[field] = v;
+  }
+  saveEdits();
+  return true;
 }
 
 // Returns true when the value actually changed and was valid.
@@ -535,12 +600,21 @@ function commitEdit(pi, ri, field, raw) {
   return true;
 }
 
-// Re-render the tables, then flash the cell that was just saved.
-function refreshAfterEdit(pi, ri, field) {
-  renderTables();
-  const sel = `td.edit[data-p="${pi}"][data-r="${ri}"][data-f="${field}"]`;
-  const el = document.querySelector(sel);
-  if (el) el.classList.add("saved");
+// Re-render the affected region, then flash whatever was just saved.
+function refreshAfterEdit(kind, pi, ri, field) {
+  if (kind === "gauge") {
+    renderGauges();
+    const el = document.querySelector(`.sub-value.edit[data-p="${pi}"][data-f="${field}"]`);
+    if (el) el.classList.add("saved");
+  } else {
+    renderTables();
+    const el = document.querySelector(`td.edit[data-p="${pi}"][data-r="${ri}"][data-f="${field}"]`);
+    if (el) el.classList.add("saved");
+  }
+}
+
+function rerender(kind) {
+  if (kind === "gauge") renderGauges(); else renderTables();
 }
 
 const board = document.getElementById("board");
@@ -548,38 +622,98 @@ const board = document.getElementById("board");
 // Remember the original text so Escape can restore it and blur can tell
 // whether anything actually changed.
 board.addEventListener("focusin", e => {
-  const td = e.target.closest && e.target.closest("td.edit");
-  if (td) td.dataset.orig = td.textContent.trim();
+  const el = e.target.closest && e.target.closest(".edit[contenteditable]");
+  if (el) el.dataset.orig = el.textContent.trim();
 });
 
 board.addEventListener("keydown", e => {
-  const td = e.target.closest && e.target.closest("td.edit");
-  if (!td) return;
+  const el = e.target.closest && e.target.closest(".edit[contenteditable]");
+  if (!el) return;
   if (e.key === "Enter") {
     e.preventDefault();
-    td.blur();
+    el.blur();
   } else if (e.key === "Escape") {
     e.preventDefault();
-    td.textContent = td.dataset.orig || "";
-    td.dataset.cancelled = "1";
-    td.blur();
+    el.textContent = el.dataset.orig || "";
+    el.dataset.cancelled = "1";
+    el.blur();
   }
 });
 
 board.addEventListener("focusout", e => {
-  const td = e.target.closest && e.target.closest("td.edit");
-  if (!td) return;
-  const { p, r, f } = td.dataset;
-  if (td.dataset.cancelled === "1") {
-    delete td.dataset.cancelled;
-    renderTables();
+  const el = e.target.closest && e.target.closest(".edit[contenteditable]");
+  if (!el) return;
+  const { kind, p, r, f } = el.dataset;
+  if (el.dataset.cancelled === "1") {
+    delete el.dataset.cancelled;
+    rerender(kind);
     return;
   }
-  const value = td.textContent.trim();
-  if (value === td.dataset.orig) return;             // nothing typed
-  if (commitEdit(+p, +r, f, value)) refreshAfterEdit(+p, +r, f);
-  else renderTables();                               // invalid — restore
+  const value = el.textContent.trim();
+  if (value === el.dataset.orig) return;             // nothing typed
+  const ok = kind === "gauge" ? commitGauge(+p, f, value) : commitEdit(+p, +r, f, value);
+  if (ok) refreshAfterEdit(kind, +p, +r, f);
+  else rerender(kind);                               // invalid — restore
 });
+
+/* -------------------------------------------------------------------------
+   The big OEE number lives inside the SVG, where contenteditable is not
+   dependable. Clicking it opens a small input positioned over the number,
+   which keeps the interaction identical from the user's side.
+   ------------------------------------------------------------------------- */
+let valueEditor = null;
+
+function closeValueEditor() {
+  if (!valueEditor) return;
+  const el = valueEditor;
+  valueEditor = null;                                // guard the blur handler
+  el.remove();
+}
+
+function openValueEditor(target, pi) {
+  closeValueEditor();
+  const box = target.getBoundingClientRect();
+  const input = document.createElement("input");
+  input.type = "text";
+  input.className = "value-editor";
+  input.value = DATA.periods[pi].oee.toFixed(1);
+  input.setAttribute("aria-label", "OEE percentage");
+  document.body.appendChild(input);
+  input.style.left = (box.left + box.width / 2) + "px";
+  input.style.top = (box.top + box.height / 2) + "px";
+  input.style.width = Math.max(110, box.width + 24) + "px";
+  valueEditor = input;
+  input.focus();
+  input.select();
+
+  const finish = save => {
+    if (!valueEditor) return;
+    const raw = input.value;
+    closeValueEditor();
+    if (save) commitGauge(pi, "oee", raw);
+    renderGauges();
+  };
+  input.addEventListener("keydown", ev => {
+    if (ev.key === "Enter") { ev.preventDefault(); finish(true); }
+    else if (ev.key === "Escape") { ev.preventDefault(); finish(false); }
+  });
+  input.addEventListener("blur", () => finish(true));
+}
+
+board.addEventListener("click", e => {
+  const value = e.target.closest && e.target.closest("text.gauge-value");
+  if (value) openValueEditor(value, +value.dataset.p);
+});
+
+board.addEventListener("keydown", e => {
+  const value = e.target.closest && e.target.closest("text.gauge-value");
+  if (value && (e.key === "Enter" || e.key === " ")) {
+    e.preventDefault();
+    openValueEditor(value, +value.dataset.p);
+  }
+});
+
+window.addEventListener("resize", closeValueEditor);
 
 // Status is a two-state field, so it toggles on click (or Enter/Space).
 function toggleStatus(pill) {
