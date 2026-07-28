@@ -317,46 +317,6 @@ const DATA = {
   // buttons switch between them and each keeps its own edits.
   departments: [
     {
-      id: "final-assembly",
-      name: "FA",
-      periods: [
-        {
-          title: "YESTERDAY",
-          accent: "var(--header-blue)",
-          oee: 78.6,
-          components: { Performance: 82.3, Availability: 74.1, Quality: 96.2 },
-          // Top 3 and their actions combined: one row per failure mode.
-          top3: [
-            { focus: "Damaged Torque",    pct: 12.4, mode: "Over torque on screw",          cause: "Torque setting out of specification", owner: "R. Patel", status: "OPEN" },
-            { focus: "Focus and Align",   pct: 7.8,  mode: "Misalignment of camera module", cause: "Fixture wear causing misalignment",   owner: "J. Lee",   status: "OPEN" },
-            { focus: "Damaged - Process", pct: 5.3,  mode: "Scratch on housing surface",    cause: "Conveyor contact damage",             owner: "M. Chen",  status: "CLOSED" }
-          ]
-        },
-        {
-          title: "WEEK TO DATE",
-          accent: "var(--header-green)",
-          oee: 86.9,
-          components: { Performance: 89.4, Availability: 85.7, Quality: 97.2 },
-          top3: [
-            { focus: "Damaged Torque",    pct: 10.1, mode: "Over torque on screw",          cause: "Operator not following torque standard", owner: "R. Patel", status: "OPEN" },
-            { focus: "Focus and Align",   pct: 6.2,  mode: "Misalignment of camera module", cause: "Fixture wear causing misalignment",      owner: "J. Lee",   status: "OPEN" },
-            { focus: "Damaged - Process", pct: 4.4,  mode: "Solder splash on connector",    cause: "Soldering iron tip contamination",       owner: "A. Kim",   status: "CLOSED" }
-          ]
-        },
-        {
-          title: "MONTH TO DATE",
-          accent: "var(--header-purple)",
-          oee: 72.3,
-          components: { Performance: 77.6, Availability: 70.3, Quality: 93.9 },
-          top3: [
-            { focus: "Damaged Torque",    pct: 13.6, mode: "Over torque on screw",  cause: "Inconsistent torque wrench calibration", owner: "R. Patel", status: "OPEN" },
-            { focus: "Damaged - Process", pct: 8.7,  mode: "Paint chip on product", cause: "Handling contact during transfer",       owner: "M. Chen",  status: "OPEN" },
-            { focus: "Focus and Align",   pct: 6.5,  mode: "Blurred image capture", cause: "Camera height drift",                    owner: "J. Lee",   status: "CLOSED" }
-          ]
-        }
-      ]
-    },
-    {
       id: "smt",
       name: "SMT",
       periods: [
@@ -430,6 +390,46 @@ const DATA = {
             { focus: "False Test Failure", pct: 7.8, mode: "Intermittent fixture contact", cause: "Pogo pin replacement overdue", owner: "B. Haddad", status: "OPEN" },
             { focus: "Label Misprint",     pct: 4.6, mode: "Barcode unreadable",           cause: "Print density drift",          owner: "R. Silva",  status: "OPEN" },
             { focus: "Carton Damage",      pct: 3.0, mode: "Crushed corner on carton",     cause: "Stacking height above spec",   owner: "M. Chen",   status: "CLOSED" }
+          ]
+        }
+      ]
+    },
+    {
+      id: "final-assembly",
+      name: "FA",
+      periods: [
+        {
+          title: "YESTERDAY",
+          accent: "var(--header-blue)",
+          oee: 78.6,
+          components: { Performance: 82.3, Availability: 74.1, Quality: 96.2 },
+          // Top 3 and their actions combined: one row per failure mode.
+          top3: [
+            { focus: "Damaged Torque",    pct: 12.4, mode: "Over torque on screw",          cause: "Torque setting out of specification", owner: "R. Patel", status: "OPEN" },
+            { focus: "Focus and Align",   pct: 7.8,  mode: "Misalignment of camera module", cause: "Fixture wear causing misalignment",   owner: "J. Lee",   status: "OPEN" },
+            { focus: "Damaged - Process", pct: 5.3,  mode: "Scratch on housing surface",    cause: "Conveyor contact damage",             owner: "M. Chen",  status: "CLOSED" }
+          ]
+        },
+        {
+          title: "WEEK TO DATE",
+          accent: "var(--header-green)",
+          oee: 86.9,
+          components: { Performance: 89.4, Availability: 85.7, Quality: 97.2 },
+          top3: [
+            { focus: "Damaged Torque",    pct: 10.1, mode: "Over torque on screw",          cause: "Operator not following torque standard", owner: "R. Patel", status: "OPEN" },
+            { focus: "Focus and Align",   pct: 6.2,  mode: "Misalignment of camera module", cause: "Fixture wear causing misalignment",      owner: "J. Lee",   status: "OPEN" },
+            { focus: "Damaged - Process", pct: 4.4,  mode: "Solder splash on connector",    cause: "Soldering iron tip contamination",       owner: "A. Kim",   status: "CLOSED" }
+          ]
+        },
+        {
+          title: "MONTH TO DATE",
+          accent: "var(--header-purple)",
+          oee: 72.3,
+          components: { Performance: 77.6, Availability: 70.3, Quality: 93.9 },
+          top3: [
+            { focus: "Damaged Torque",    pct: 13.6, mode: "Over torque on screw",  cause: "Inconsistent torque wrench calibration", owner: "R. Patel", status: "OPEN" },
+            { focus: "Damaged - Process", pct: 8.7,  mode: "Paint chip on product", cause: "Handling contact during transfer",       owner: "M. Chen",  status: "OPEN" },
+            { focus: "Focus and Align",   pct: 6.5,  mode: "Blurred image capture", cause: "Camera height drift",                    owner: "J. Lee",   status: "CLOSED" }
           ]
         }
       ]
