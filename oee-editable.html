@@ -357,8 +357,8 @@ const DATA = {
       ]
     },
     {
-      id: "pcb-assembly",
-      name: "PCB ASSEMBLY",
+      id: "smt",
+      name: "SMT",
       periods: [
         {
           title: "YESTERDAY",
@@ -396,8 +396,8 @@ const DATA = {
       ]
     },
     {
-      id: "test-packaging",
-      name: "TEST & PACKAGING",
+      id: "post",
+      name: "POST",
       periods: [
         {
           title: "YESTERDAY",
@@ -619,6 +619,7 @@ function render() {
     </div>`;
 
   document.getElementById("reset").addEventListener("click", resetEdits);
+  lockTablesHeight();
 }
 
 function switchDept(i) {
@@ -687,6 +688,34 @@ function resetEdits() {
 
 function renderTables() {
   document.getElementById("tables").innerHTML = dept().periods.map(renderTable).join("");
+  lockTablesHeight();
+}
+
+/* The tables row is as tall as its text needs, which differs per
+   department — left alone, switching departments would resize the gauges
+   above it. Measuring every department off-screen and pinning the row to
+   the tallest keeps the gauges rock steady across switches. */
+function lockTablesHeight() {
+  const tables = document.getElementById("tables");
+  if (!tables) return;
+  const width = tables.getBoundingClientRect().width;
+  if (!width) return;
+
+  tables.style.height = "auto";
+  const probe = document.createElement("div");
+  probe.className = "columns tables-row";
+  probe.style.cssText =
+    `position:absolute; visibility:hidden; pointer-events:none; top:0; left:-99999px; width:${width}px;`;
+  document.body.appendChild(probe);
+
+  let tallest = 0;
+  DATA.departments.forEach(d => {
+    probe.innerHTML = d.periods.map(renderTable).join("");
+    tallest = Math.max(tallest, probe.getBoundingClientRect().height);
+  });
+  probe.remove();
+
+  if (tallest) tables.style.height = Math.ceil(tallest) + "px";
 }
 
 function renderGauges() {
@@ -847,7 +876,13 @@ board.addEventListener("keydown", e => {
   }
 });
 
-window.addEventListener("resize", closeValueEditor);
+// Wrapping changes with the window, so the locked height is remeasured.
+let resizeTimer = null;
+window.addEventListener("resize", () => {
+  closeValueEditor();
+  clearTimeout(resizeTimer);
+  resizeTimer = setTimeout(lockTablesHeight, 120);
+});
 
 // Status is a two-state field, so it toggles on click (or Enter/Space).
 function toggleStatus(pill) {
