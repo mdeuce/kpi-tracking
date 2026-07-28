@@ -47,15 +47,26 @@
     align-items: center;
     gap: 16px;
   }
-  .plant-badge {
-    display: inline-block;
+  /* Department switcher — the active one reads as the old plant badge */
+  .dept-switch { display: flex; gap: 6px; flex-wrap: wrap; }
+  .dept-tab {
+    font-family: inherit;
+    font-weight: 800;
+    font-size: clamp(10px, 0.95vw, 18px);
+    letter-spacing: 0.4px;
+    padding: 0.7vh 0.9vw;
+    border-radius: 6px;
+    border: 1.5px solid var(--header-blue);
+    background: var(--surface);
+    color: var(--header-blue);
+    cursor: pointer;
+    white-space: nowrap;
+  }
+  .dept-tab:hover { background: #e7edfa; }
+  .dept-tab.active {
     background: var(--header-blue);
     color: #fff;
-    font-weight: 800;
-    font-size: clamp(14px, 1.35vw, 26px);
-    letter-spacing: 0.5px;
-    padding: 0.7vh 1.4vw;
-    border-radius: 6px;
+    cursor: default;
   }
   .board-title { text-align: center; }
   .board-title h1 {
@@ -294,7 +305,6 @@
    and the gauges, lists and tables re-render from it.
    ========================================================================= */
 const DATA = {
-  plant: "FINAL ASSEMBLY",
   title: "OEE",
   scaleMax: 110,               // OEE evaluated up to 110%
   // Status thresholds: >= good → green, >= warn → amber, else red
@@ -302,43 +312,134 @@ const DATA = {
   // Targets shown as markers on the gauges.
   // Quality follows from the OEE math: 80% / (90% × 90%) ≈ 98.8%
   targets: { OEE: 80, Performance: 90, Availability: 90, Quality: 98.8 },
-  periods: [
+
+  // One entry per department. Only one is shown at a time; the header
+  // buttons switch between them and each keeps its own edits.
+  departments: [
     {
-      title: "YESTERDAY",
-      accent: "var(--header-blue)",
-      oee: 78.6,
-      components: { Performance: 82.3, Availability: 74.1, Quality: 96.2 },
-      // Top 3 and their actions combined: one row per failure mode.
-      top3: [
-        { focus: "Damaged Torque",    pct: 12.4, mode: "Over torque on screw",          cause: "Torque setting out of specification", owner: "R. Patel", status: "OPEN" },
-        { focus: "Focus and Align",   pct: 7.8,  mode: "Misalignment of camera module", cause: "Fixture wear causing misalignment",   owner: "J. Lee",   status: "OPEN" },
-        { focus: "Damaged - Process", pct: 5.3,  mode: "Scratch on housing surface",    cause: "Conveyor contact damage",             owner: "M. Chen",  status: "CLOSED" }
+      id: "final-assembly",
+      name: "FINAL ASSEMBLY",
+      periods: [
+        {
+          title: "YESTERDAY",
+          accent: "var(--header-blue)",
+          oee: 78.6,
+          components: { Performance: 82.3, Availability: 74.1, Quality: 96.2 },
+          // Top 3 and their actions combined: one row per failure mode.
+          top3: [
+            { focus: "Damaged Torque",    pct: 12.4, mode: "Over torque on screw",          cause: "Torque setting out of specification", owner: "R. Patel", status: "OPEN" },
+            { focus: "Focus and Align",   pct: 7.8,  mode: "Misalignment of camera module", cause: "Fixture wear causing misalignment",   owner: "J. Lee",   status: "OPEN" },
+            { focus: "Damaged - Process", pct: 5.3,  mode: "Scratch on housing surface",    cause: "Conveyor contact damage",             owner: "M. Chen",  status: "CLOSED" }
+          ]
+        },
+        {
+          title: "WEEK TO DATE",
+          accent: "var(--header-green)",
+          oee: 86.9,
+          components: { Performance: 89.4, Availability: 85.7, Quality: 97.2 },
+          top3: [
+            { focus: "Damaged Torque",    pct: 10.1, mode: "Over torque on screw",          cause: "Operator not following torque standard", owner: "R. Patel", status: "OPEN" },
+            { focus: "Focus and Align",   pct: 6.2,  mode: "Misalignment of camera module", cause: "Fixture wear causing misalignment",      owner: "J. Lee",   status: "OPEN" },
+            { focus: "Damaged - Process", pct: 4.4,  mode: "Solder splash on connector",    cause: "Soldering iron tip contamination",       owner: "A. Kim",   status: "CLOSED" }
+          ]
+        },
+        {
+          title: "MONTH TO DATE",
+          accent: "var(--header-purple)",
+          oee: 72.3,
+          components: { Performance: 77.6, Availability: 70.3, Quality: 93.9 },
+          top3: [
+            { focus: "Damaged Torque",    pct: 13.6, mode: "Over torque on screw",  cause: "Inconsistent torque wrench calibration", owner: "R. Patel", status: "OPEN" },
+            { focus: "Damaged - Process", pct: 8.7,  mode: "Paint chip on product", cause: "Handling contact during transfer",       owner: "M. Chen",  status: "OPEN" },
+            { focus: "Focus and Align",   pct: 6.5,  mode: "Blurred image capture", cause: "Camera height drift",                    owner: "J. Lee",   status: "CLOSED" }
+          ]
+        }
       ]
     },
     {
-      title: "WEEK TO DATE",
-      accent: "var(--header-green)",
-      oee: 86.9,
-      components: { Performance: 89.4, Availability: 85.7, Quality: 97.2 },
-      top3: [
-        { focus: "Damaged Torque",    pct: 10.1, mode: "Over torque on screw",          cause: "Operator not following torque standard", owner: "R. Patel", status: "OPEN" },
-        { focus: "Focus and Align",   pct: 6.2,  mode: "Misalignment of camera module", cause: "Fixture wear causing misalignment",      owner: "J. Lee",   status: "OPEN" },
-        { focus: "Damaged - Process", pct: 4.4,  mode: "Solder splash on connector",    cause: "Soldering iron tip contamination",       owner: "A. Kim",   status: "CLOSED" }
+      id: "pcb-assembly",
+      name: "PCB ASSEMBLY",
+      periods: [
+        {
+          title: "YESTERDAY",
+          accent: "var(--header-blue)",
+          oee: 84.2,
+          components: { Performance: 88.1, Availability: 82.4, Quality: 96.9 },
+          top3: [
+            { focus: "Solder Bridging",    pct: 9.6, mode: "Bridging on QFN pads",       cause: "Excess solder paste volume",     owner: "L. Ortiz", status: "OPEN" },
+            { focus: "Placement Accuracy", pct: 6.9, mode: "Offset on 0402 resistors",   cause: "Feeder indexing drift",          owner: "D. Novak", status: "OPEN" },
+            { focus: "Tombstoning",        pct: 4.1, mode: "Chip cap lifted on one end", cause: "Uneven pad heating in reflow",   owner: "S. Iyer",  status: "CLOSED" }
+          ]
+        },
+        {
+          title: "WEEK TO DATE",
+          accent: "var(--header-green)",
+          oee: 88.5,
+          components: { Performance: 91.2, Availability: 87.3, Quality: 98.1 },
+          top3: [
+            { focus: "Solder Bridging",    pct: 7.4, mode: "Bridging on QFN pads",     cause: "Stencil aperture wear",         owner: "L. Ortiz", status: "OPEN" },
+            { focus: "Placement Accuracy", pct: 5.8, mode: "Offset on 0402 resistors", cause: "Nozzle vacuum loss",            owner: "D. Novak", status: "OPEN" },
+            { focus: "Tombstoning",        pct: 3.6, mode: "Chip cap lifted on one end", cause: "Reflow profile ramp too steep", owner: "S. Iyer",  status: "CLOSED" }
+          ]
+        },
+        {
+          title: "MONTH TO DATE",
+          accent: "var(--header-purple)",
+          oee: 79.8,
+          components: { Performance: 85.6, Availability: 78.9, Quality: 95.4 },
+          top3: [
+            { focus: "Placement Accuracy", pct: 11.2, mode: "Offset on 0402 resistors", cause: "Feeder calibration overdue",  owner: "D. Novak", status: "OPEN" },
+            { focus: "Solder Bridging",    pct: 8.3,  mode: "Bridging on QFN pads",     cause: "Paste viscosity out of spec",  owner: "L. Ortiz", status: "OPEN" },
+            { focus: "Tombstoning",        pct: 5.5,  mode: "Chip cap lifted on one end", cause: "Pad design imbalance",       owner: "S. Iyer",  status: "CLOSED" }
+          ]
+        }
       ]
     },
     {
-      title: "MONTH TO DATE",
-      accent: "var(--header-purple)",
-      oee: 72.3,
-      components: { Performance: 77.6, Availability: 70.3, Quality: 93.9 },
-      top3: [
-        { focus: "Damaged Torque",    pct: 13.6, mode: "Over torque on screw",  cause: "Inconsistent torque wrench calibration", owner: "R. Patel", status: "OPEN" },
-        { focus: "Damaged - Process", pct: 8.7,  mode: "Paint chip on product", cause: "Handling contact during transfer",       owner: "M. Chen",  status: "OPEN" },
-        { focus: "Focus and Align",   pct: 6.5,  mode: "Blurred image capture", cause: "Camera height drift",                    owner: "J. Lee",   status: "CLOSED" }
+      id: "test-packaging",
+      name: "TEST & PACKAGING",
+      periods: [
+        {
+          title: "YESTERDAY",
+          accent: "var(--header-blue)",
+          oee: 91.3,
+          components: { Performance: 94.2, Availability: 93.1, Quality: 98.6 },
+          top3: [
+            { focus: "False Test Failure", pct: 5.2, mode: "Intermittent fixture contact", cause: "Worn pogo pins",              owner: "B. Haddad", status: "OPEN" },
+            { focus: "Label Misprint",     pct: 3.4, mode: "Barcode unreadable",           cause: "Printer head contamination",  owner: "R. Silva",  status: "OPEN" },
+            { focus: "Carton Damage",      pct: 2.1, mode: "Crushed corner on carton",     cause: "Palletizer gripper pressure", owner: "M. Chen",   status: "CLOSED" }
+          ]
+        },
+        {
+          title: "WEEK TO DATE",
+          accent: "var(--header-green)",
+          oee: 89.7,
+          components: { Performance: 92.5, Availability: 91.0, Quality: 97.9 },
+          top3: [
+            { focus: "False Test Failure", pct: 6.1, mode: "Intermittent fixture contact", cause: "Test fixture cable fatigue", owner: "B. Haddad", status: "OPEN" },
+            { focus: "Label Misprint",     pct: 3.9, mode: "Barcode unreadable",           cause: "Label stock misfeed",        owner: "R. Silva",  status: "OPEN" },
+            { focus: "Carton Damage",      pct: 2.4, mode: "Crushed corner on carton",     cause: "Conveyor transfer gap",      owner: "M. Chen",   status: "CLOSED" }
+          ]
+        },
+        {
+          title: "MONTH TO DATE",
+          accent: "var(--header-purple)",
+          oee: 86.4,
+          components: { Performance: 90.1, Availability: 88.2, Quality: 96.3 },
+          top3: [
+            { focus: "False Test Failure", pct: 7.8, mode: "Intermittent fixture contact", cause: "Pogo pin replacement overdue", owner: "B. Haddad", status: "OPEN" },
+            { focus: "Label Misprint",     pct: 4.6, mode: "Barcode unreadable",           cause: "Print density drift",          owner: "R. Silva",  status: "OPEN" },
+            { focus: "Carton Damage",      pct: 3.0, mode: "Crushed corner on carton",     cause: "Stacking height above spec",   owner: "M. Chen",   status: "CLOSED" }
+          ]
+        }
       ]
     }
   ]
 };
+
+// Which department is on screen. Everything renders from dept().periods.
+let activeDept = 0;
+const dept = () => DATA.departments[activeDept];
 
 /* =========================================================================
    Rendering
@@ -494,11 +595,13 @@ function renderTable(p, pi) {
 }
 
 function render() {
+  const tabs = DATA.departments.map((d, i) =>
+    `<button class="dept-tab${i === activeDept ? " active" : ""}" data-d="${i}">${d.name}</button>`
+  ).join("");
+
   document.getElementById("board").innerHTML = `
     <header class="board-header">
-      <div>
-        <span class="plant-badge">${DATA.plant}</span>
-      </div>
+      <div class="dept-switch">${tabs}</div>
       <div class="board-title">
         <h1>${DATA.title}</h1>
       </div>
@@ -509,13 +612,21 @@ function render() {
     </header>
 
     <div class="columns gauges-row" id="gauges">
-      ${DATA.periods.map(renderPeriod).join("")}
+      ${dept().periods.map(renderPeriod).join("")}
     </div>
     <div class="columns tables-row" id="tables">
-      ${DATA.periods.map(renderTable).join("")}
+      ${dept().periods.map(renderTable).join("")}
     </div>`;
 
   document.getElementById("reset").addEventListener("click", resetEdits);
+}
+
+function switchDept(i) {
+  if (i === activeDept || !DATA.departments[i]) return;
+  closeValueEditor();
+  activeDept = i;
+  try { localStorage.setItem(DEPT_KEY, DATA.departments[i].id); } catch (e) {}
+  render();
 }
 
 /* =========================================================================
@@ -523,46 +634,69 @@ function render() {
    Edits are written back into DATA and kept in localStorage so a refresh
    doesn't lose them. Reset restores the mock data defined above.
    ========================================================================= */
-const STORE_KEY = "oee-board-edits-v2";
+// Edits are stored per department, keyed by department id, so switching
+// departments never mixes one department's numbers into another's.
+const STORE_KEY = "oee-board-edits-v3";
+const DEPT_KEY = "oee-board-dept";
+
+function readStore() {
+  try {
+    const raw = JSON.parse(localStorage.getItem(STORE_KEY) || "null");
+    return raw && typeof raw === "object" ? raw : {};
+  } catch (e) { return {}; }
+}
 
 function saveEdits() {
   try {
-    const payload = DATA.periods.map(p => ({ oee: p.oee, components: p.components, top3: p.top3 }));
-    localStorage.setItem(STORE_KEY, JSON.stringify(payload));
+    const store = readStore();
+    store[dept().id] = dept().periods.map(p => ({ oee: p.oee, components: p.components, top3: p.top3 }));
+    localStorage.setItem(STORE_KEY, JSON.stringify(store));
   } catch (e) { /* private browsing / storage disabled — edits stay in memory */ }
 }
 
 function loadEdits() {
-  try {
-    const saved = JSON.parse(localStorage.getItem(STORE_KEY) || "null");
+  const store = readStore();
+  DATA.departments.forEach(d => {
+    const saved = store[d.id];
     if (!Array.isArray(saved)) return;
     saved.forEach((s, i) => {
-      const p = DATA.periods[i];
+      const p = d.periods[i];
       if (!p || !s) return;
       if (typeof s.oee === "number") p.oee = s.oee;
       if (s.components) Object.assign(p.components, s.components);
       if (Array.isArray(s.top3)) p.top3 = s.top3;
     });
-  } catch (e) { /* ignore malformed storage */ }
+  });
+  // Reopen on whichever department was last viewed.
+  try {
+    const last = localStorage.getItem(DEPT_KEY);
+    const i = DATA.departments.findIndex(d => d.id === last);
+    if (i >= 0) activeDept = i;
+  } catch (e) {}
 }
 
+// Resets the department currently on screen; the others keep their edits.
 function resetEdits() {
-  try { localStorage.removeItem(STORE_KEY); } catch (e) {}
+  try {
+    const store = readStore();
+    delete store[dept().id];
+    localStorage.setItem(STORE_KEY, JSON.stringify(store));
+  } catch (e) {}
   location.reload();
 }
 
 function renderTables() {
-  document.getElementById("tables").innerHTML = DATA.periods.map(renderTable).join("");
+  document.getElementById("tables").innerHTML = dept().periods.map(renderTable).join("");
 }
 
 function renderGauges() {
-  document.getElementById("gauges").innerHTML = DATA.periods.map(renderPeriod).join("");
+  document.getElementById("gauges").innerHTML = dept().periods.map(renderPeriod).join("");
 }
 
 // Gauge values (OEE and the three components) share one parser: numeric,
 // clamped to the 0–110 scale and rounded to the displayed decimal.
 function commitGauge(pi, field, raw) {
-  const p = DATA.periods[pi];
+  const p = dept().periods[pi];
   if (!p) return false;
   const n = parseFloat(String(raw).replace(/[^0-9.]/g, ""));
   if (!isFinite(n)) return false;
@@ -580,7 +714,7 @@ function commitGauge(pi, field, raw) {
 
 // Returns true when the value actually changed and was valid.
 function commitEdit(pi, ri, field, raw) {
-  const row = DATA.periods[pi] && DATA.periods[pi].top3[ri];
+  const row = dept().periods[pi] && dept().periods[pi].top3[ri];
   if (!row) return false;
 
   if (field === "pct") {
@@ -676,7 +810,7 @@ function openValueEditor(target, pi) {
   const input = document.createElement("input");
   input.type = "text";
   input.className = "value-editor";
-  input.value = DATA.periods[pi].oee.toFixed(1);
+  input.value = dept().periods[pi].oee.toFixed(1);
   input.setAttribute("aria-label", "OEE percentage");
   document.body.appendChild(input);
   input.style.left = (box.left + box.width / 2) + "px";
@@ -718,7 +852,7 @@ window.addEventListener("resize", closeValueEditor);
 // Status is a two-state field, so it toggles on click (or Enter/Space).
 function toggleStatus(pill) {
   const { p, r } = pill.dataset;
-  const row = DATA.periods[+p].top3[+r];
+  const row = dept().periods[+p].top3[+r];
   row.status = row.status === "OPEN" ? "CLOSED" : "OPEN";
   saveEdits();
   renderTables();
@@ -727,6 +861,9 @@ function toggleStatus(pill) {
 board.addEventListener("click", e => {
   const pill = e.target.closest && e.target.closest(".pill.editable");
   if (pill) toggleStatus(pill);
+
+  const tab = e.target.closest && e.target.closest(".dept-tab");
+  if (tab) switchDept(+tab.dataset.d);
 });
 
 board.addEventListener("keydown", e => {
