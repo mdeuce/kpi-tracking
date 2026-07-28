@@ -6,18 +6,20 @@
 <title>OEE Combined — Final Assembly</title>
 <style>
   :root {
-    /* Magna International brand: red #DA291C + neutral gray scale */
-    --brand-red: #da291c;
-    --charcoal: #3a3a3a;
+    --navy: #16336e;
+    --navy-dark: #0d1f45;
+    --header-blue: #1d3f8f;
+    --header-green: #2e8b3d;
+    --header-purple: #5a4fa8;
     --status-green: #22a83a;
     --status-amber: #f2a20c;
     --status-amber-text: #e08d00;
     --status-red: #d7263d;
-    --ink: #2b2b2b;
-    --ink-muted: #6b6b6b;
-    --line: #d9d9d9;
+    --ink: #1a2440;
+    --ink-muted: #46536f;
+    --line: #c9d2e0;
     --surface: #ffffff;
-    --page: #f7f7f7;
+    --page: #f4f6fb;
   }
   * { margin: 0; padding: 0; box-sizing: border-box; }
   html { background: var(--page); }
@@ -39,7 +41,7 @@
   }
   .plant-badge {
     display: inline-block;
-    background: var(--brand-red);
+    background: var(--header-blue);
     color: #fff;
     font-weight: 800;
     font-size: 22px;
@@ -52,7 +54,7 @@
     font-size: 44px;
     font-weight: 900;
     letter-spacing: 1px;
-    color: var(--charcoal);
+    color: var(--navy-dark);
     line-height: 1.05;
   }
   /* ---------- Period columns ---------- */
@@ -103,43 +105,39 @@
   .sub-gauge .sub-target {
     font-size: 11.5px;
     font-weight: 700;
-    color: var(--charcoal);
+    color: var(--navy);
     margin-top: 1px;
   }
 
-  /* ---------- Combined Top 3 + Actions ---------- */
-  .combined {
-    display: flex;
-    flex-direction: column;
-    gap: 12px;
-    margin-top: 18px;
-  }
+  /* ---------- Per-period Top 3 Actions table ---------- */
   thead.light th {
-    background: #f0f0f0;
+    background: #eef2f9;
     color: var(--ink-muted);
     border-bottom: 1px solid var(--line);
   }
-  .top3-table { font-size: 14px; }
-  .top3-table thead th:nth-child(1) { width: 4%; }
-  .top3-table thead th:nth-child(2) { width: 13%; }
-  .top3-table thead th:nth-child(3),
-  .top3-table thead th:nth-child(4),
-  .top3-table thead th:nth-child(5) { width: 9%; }
-  .top3-table thead th:nth-child(6) { width: 16%; }
-  .top3-table thead th:nth-child(7) { width: 24%; }
-  .top3-table thead th:nth-child(8) { width: 8%; }
-  .top3-table thead th:nth-child(9) { width: 8%; }
+  .top3-table { font-size: 11.5px; }
+  .top3-table thead th { padding: 7px 5px; }
+  .top3-table tbody td { padding: 8px 5px; }
+  .top3-table thead th:nth-child(1) { width: 6%; }
+  .top3-table thead th:nth-child(2) { width: 18%; }
+  .top3-table thead th:nth-child(3) { width: 9%; }
+  .top3-table thead th:nth-child(4) { width: 20%; }
+  .top3-table thead th:nth-child(5) { width: 23%; }
+  .top3-table thead th:nth-child(6) { width: 11%; }
+  .top3-table thead th:nth-child(7) { width: 13%; }
+  .top3-table .pill { font-size: 9.5px; padding: 3px 5px; letter-spacing: 0.2px; }
   .top3-table td.rank { font-weight: 800; }
   .top3-table td.name { font-weight: 700; }
   .top3-table td.pct { font-weight: 800; }
+  /* Focus Area, Failure Mode and Root Cause read left-aligned */
   .top3-table thead th:nth-child(2),
-  .top3-table thead th:nth-child(6),
-  .top3-table thead th:nth-child(7),
+  .top3-table thead th:nth-child(4),
+  .top3-table thead th:nth-child(5),
   .top3-table tbody td:nth-child(2),
-  .top3-table tbody td:nth-child(6),
-  .top3-table tbody td:nth-child(7) {
+  .top3-table tbody td:nth-child(4),
+  .top3-table tbody td:nth-child(5) {
     text-align: left;
-    padding-left: 14px;
+    padding-left: 8px;
   }
 
   /* ---------- Action table ---------- */
@@ -233,30 +231,38 @@ const DATA = {
   periods: [
     {
       title: "YESTERDAY",
-      accent: "var(--charcoal)",
+      accent: "var(--header-blue)",
       oee: 78.6,
-      components: { Performance: 82.3, Availability: 74.1, Quality: 96.2 }
+      components: { Performance: 82.3, Availability: 74.1, Quality: 96.2 },
+      // Top 3 and their actions combined: one row per failure mode.
+      top3: [
+        { focus: "Damaged Torque",    pct: 12.4, mode: "Over torque on screw",          cause: "Torque setting out of specification", owner: "R. Patel", status: "OPEN" },
+        { focus: "Focus and Align",   pct: 7.8,  mode: "Misalignment of camera module", cause: "Fixture wear causing misalignment",   owner: "J. Lee",   status: "OPEN" },
+        { focus: "Damaged - Process", pct: 5.3,  mode: "Scratch on housing surface",    cause: "Conveyor contact damage",             owner: "M. Chen",  status: "CLOSED" }
+      ]
     },
     {
       title: "WEEK TO DATE",
-      accent: "var(--charcoal)",
+      accent: "var(--header-green)",
       oee: 86.9,
-      components: { Performance: 89.4, Availability: 85.7, Quality: 97.2 }
+      components: { Performance: 89.4, Availability: 85.7, Quality: 97.2 },
+      top3: [
+        { focus: "Damaged Torque",    pct: 10.1, mode: "Over torque on screw",          cause: "Operator not following torque standard", owner: "R. Patel", status: "OPEN" },
+        { focus: "Focus and Align",   pct: 6.2,  mode: "Misalignment of camera module", cause: "Fixture wear causing misalignment",      owner: "J. Lee",   status: "OPEN" },
+        { focus: "Damaged - Process", pct: 4.4,  mode: "Solder splash on connector",    cause: "Soldering iron tip contamination",       owner: "A. Kim",   status: "CLOSED" }
+      ]
     },
     {
       title: "MONTH TO DATE",
-      accent: "var(--charcoal)",
+      accent: "var(--header-purple)",
       oee: 72.3,
-      components: { Performance: 77.6, Availability: 70.3, Quality: 93.9 }
+      components: { Performance: 77.6, Availability: 70.3, Quality: 93.9 },
+      top3: [
+        { focus: "Damaged Torque",    pct: 13.6, mode: "Over torque on screw",  cause: "Inconsistent torque wrench calibration", owner: "R. Patel", status: "OPEN" },
+        { focus: "Damaged - Process", pct: 8.7,  mode: "Paint chip on product", cause: "Handling contact during transfer",       owner: "M. Chen",  status: "OPEN" },
+        { focus: "Focus and Align",   pct: 6.5,  mode: "Blurred image capture", cause: "Camera height drift",                    owner: "J. Lee",   status: "CLOSED" }
+      ]
     }
-  ],
-  // Top 3 and their actions combined: one row per failure mode, ranked by
-  // month-to-date. pct values align with the periods array above
-  // (Yesterday, Week to Date, Month to Date); the rest is the action.
-  top3: [
-    { focus: "Damaged Torque",    pct: [12.4, 10.1, 13.6], mode: "Over torque on screw",          cause: "Inconsistent torque wrench calibration", owner: "R. Patel", status: "OPEN" },
-    { focus: "Damaged - Process", pct: [5.3,  4.4,  8.7],  mode: "Paint chip on product",         cause: "Handling contact during transfer",       owner: "M. Chen",  status: "OPEN" },
-    { focus: "Focus and Align",   pct: [7.8,  6.2,  6.5],  mode: "Misalignment of camera module", cause: "Fixture wear causing misalignment",      owner: "J. Lee",   status: "OPEN" }
   ],
   notes: [
     "OEE = Availability × Performance × Quality",
@@ -340,7 +346,7 @@ function gaugeSVG(value, { size = "main", target = DATA.thresholds.good } = {}) 
     });
     // center labels
     s += `<text x="${cx}" y="${cy - 4}" text-anchor="middle" font-size="40" font-weight="900" fill="${statusColor(value)}">${value.toFixed(1)}%</text>`;
-    s += `<text x="${cx}" y="${cy + 20}" text-anchor="middle" font-size="13.5" font-weight="700" fill="var(--charcoal)">Target ${+target.toFixed(1)}%</text>`;
+    s += `<text x="${cx}" y="${cy + 20}" text-anchor="middle" font-size="13.5" font-weight="700" fill="var(--navy)">Target ${+target.toFixed(1)}%</text>`;
   }
 
   // needle
@@ -367,22 +373,11 @@ function renderPeriod(p) {
       <div class="sub-target">Target ${+DATA.targets[name].toFixed(1)}%</div>
     </div>`).join("");
 
-  return `
-  <section class="period">
-    <div class="panel">
-      <div class="panel-title" style="background:${p.accent}">${p.title}</div>
-      <div class="gauge-main">${gaugeSVG(p.oee, { target: DATA.targets.OEE })}</div>
-      <div class="sub-gauges">${subGauges}</div>
-    </div>
-  </section>`;
-}
-
-function renderCombined() {
-  const rows = DATA.top3.map((t, i) => `
+  const rows = p.top3.map((t, i) => `
     <tr>
       <td class="rank">${i + 1}</td>
       <td class="name">${t.focus}</td>
-      ${t.pct.map(v => `<td class="pct" style="color:${paretoColor(v)}">${v.toFixed(1)}%</td>`).join("")}
+      <td class="pct" style="color:${paretoColor(t.pct)}">${t.pct.toFixed(1)}%</td>
       <td>${t.mode}</td>
       <td>${t.cause}</td>
       <td>${t.owner}</td>
@@ -390,21 +385,25 @@ function renderCombined() {
     </tr>`).join("");
 
   return `
-  <div class="combined">
+  <section class="period">
     <div class="panel">
-      <div class="panel-title" style="background:var(--brand-red)">TOP 3 ACTIONS</div>
+      <div class="panel-title" style="background:${p.accent}">${p.title}</div>
+      <div class="gauge-main">${gaugeSVG(p.oee, { target: DATA.targets.OEE })}</div>
+      <div class="sub-gauges">${subGauges}</div>
+    </div>
+    <div class="panel">
+      <div class="panel-title" style="background:${p.accent}">TOP 3 ACTIONS</div>
       <table class="top3-table">
         <thead class="light">
           <tr>
-            <th>#</th><th>Focus Area</th>
-            ${DATA.periods.map(p => `<th>${p.title}</th>`).join("")}
-            <th>Failure Mode</th><th>Root Cause Investigation</th><th>Owner</th><th>Status</th>
+            <th>#</th><th>Focus Area</th><th>%</th>
+            <th>Failure Mode</th><th>Root Cause</th><th>Owner</th><th>Status</th>
           </tr>
         </thead>
         <tbody>${rows}</tbody>
       </table>
     </div>
-  </div>`;
+  </section>`;
 }
 
 function render() {
@@ -422,8 +421,6 @@ function render() {
     <div class="columns">
       ${DATA.periods.map(renderPeriod).join("")}
     </div>
-
-    ${renderCombined()}
 
     <footer class="board-footer">
       <div class="notes">
